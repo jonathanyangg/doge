@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+// Define a type for Agency
+interface Agency {
+  slug: string;
+  name: string;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const agencySlug = searchParams.get('agency');
@@ -80,7 +86,7 @@ export async function GET(request: NextRequest) {
     const agencies = await agenciesResponse.json();
     
     // Find the agency
-    const agency = agencies.find((a: any) => 
+    const agency = agencies.find((a: Agency) => 
       a.slug === agencySlug || a.name.toLowerCase().includes(agencySlug.toLowerCase())
     );
     

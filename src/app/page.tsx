@@ -2,12 +2,30 @@
 
 import React, { useState } from 'react';
 import ResultsDisplay from '@/components/ResultsDisplay';
-import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+
+// Use the same type definitions as in ResultsDisplay
+interface Agency {
+  name: string;
+  short_name: string;
+  display_name: string;
+  sortable_name: string;
+  slug: string;
+  children: Agency[];
+  cfr_references: {
+    title: number;
+    chapter: string;
+  }[];
+}
+
+interface AgenciesResponse {
+  agencies: Agency[];
+  error?: string;
+}
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
-  const [results, setResults] = useState<any | null>(null);
+  const [results, setResults] = useState<AgenciesResponse | null>(null);
 
   const getAgencies = async () => {
     setLoading(true);
@@ -18,7 +36,10 @@ export default function Home() {
       setResults(data);
     } catch (error) {
       console.error('Error fetching data:', error);
-      setResults({ error: 'Failed to fetch data' });
+      setResults({ 
+        agencies: [],
+        error: 'Failed to fetch data' 
+      });
     } finally {
       setLoading(false);
     }
