@@ -3,10 +3,68 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const agencySlug = searchParams.get('agency');
+  const title = searchParams.get('title');
+  const startDate = searchParams.get('startDate');
+  const endDate = searchParams.get('endDate');
   
+  // Handle title changes search
+  if (title) {
+    try {
+      // Construct the API URL for title changes
+      let apiUrl = `https://www.ecfr.gov/api/versioner/v1/versions/title-${title}.json`;
+      
+      // Add date parameters if provided
+      const params = new URLSearchParams();
+      
+      if (startDate) {
+        params.append('issue_date[gte]', startDate);
+      }
+      
+      if (endDate) {
+        params.append('issue_date[lte]', endDate);
+      }
+      
+      if (params.toString()) {
+        apiUrl += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(apiUrl);
+      
+      if (!response.ok) {
+        // Handle specific error responses
+        if (response.status === 400) {
+          const errorData = await response.json();
+          return NextResponse.json(
+            { error: errorData.error || 'Invalid request parameters' },
+            { status: 400 }
+          );
+        }
+        
+        if (response.status === 503) {
+          return NextResponse.json(
+            { error: 'This title is currently unavailable. Please try again later.' },
+            { status: 503 }
+          );
+        }
+        
+        throw new Error(`Error fetching title changes: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      return NextResponse.json(data);
+    } catch (error) {
+      console.error('Failed to fetch title changes:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch title changes' },
+        { status: 500 }
+      );
+    }
+  }
+  
+  // Handle agency changes search (original functionality)
   if (!agencySlug) {
     return NextResponse.json(
-      { error: 'Agency parameter is required' },
+      { error: 'Either agency or title parameter is required' },
       { status: 400 }
     );
   }
@@ -35,18 +93,21 @@ export async function GET(request: NextRequest) {
     
     // Get historical changes
     // We need to set a valid date range - let's use the last 12 months
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setFullYear(endDate.getFullYear() - 1);
+    const formattedEndDate = endDate || new Date().toISOString().split('T')[0];
+    let formattedStartDate;
     
-    const formatDate = (date: Date) => {
-      return date.toISOString().split('T')[0];
-    };
+    if (startDate) {
+      formattedStartDate = startDate;
+    } else {
+      const startDateObj = new Date();
+      startDateObj.setFullYear(startDateObj.getFullYear() - 1);
+      formattedStartDate = startDateObj.toISOString().split('T')[0];
+    }
     
     const params = new URLSearchParams({
       'agency_slugs[]': agency.slug,
-      'last_modified_after': formatDate(startDate),
-      'last_modified_before': formatDate(endDate),
+      'last_modified_after': formattedStartDate,
+      'last_modified_before': formattedEndDate,
     });
     
     const changesResponse = await fetch(`https://www.ecfr.gov/api/search/v1/counts/daily?${params}`);
@@ -61,8 +122,8 @@ export async function GET(request: NextRequest) {
       agency: agency.name,
       slug: agency.slug,
       period: {
-        start: formatDate(startDate),
-        end: formatDate(endDate),
+        start: formattedStartDate,
+        end: formattedEndDate,
       },
       changes: changesData,
     });

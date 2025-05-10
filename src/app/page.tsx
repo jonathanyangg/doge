@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import ResultsDisplay from '@/components/ResultsDisplay';
+import Link from 'next/link';
+import Navbar from '@/components/Navbar';
 
 export default function Home() {
   const [loading, setLoading] = useState<boolean>(false);
@@ -25,10 +27,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-blue-600 text-white p-6 shadow-md">
-        <h1 className="text-3xl font-bold">eCFR Analyzer</h1>
-        <p className="text-sm mt-1">Federal Regulations Analysis Dashboard</p>
-      </header>
+      <Navbar />
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -36,12 +35,14 @@ export default function Home() {
         <div className="bg-white p-6 rounded-lg shadow-md mb-6">
           <h2 className="text-xl font-semibold mb-4">Content Structure</h2>
           
-          <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
-            onClick={getAgencies}
-          >
-            Get Agencies
-          </button>
+          <div className="flex gap-4">
+            <button
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md"
+              onClick={getAgencies}
+            >
+              Get Agencies
+            </button>
+          </div>
         </div>
 
         {/* Results Section */}
