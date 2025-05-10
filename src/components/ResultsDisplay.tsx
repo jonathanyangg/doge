@@ -1,7 +1,25 @@
 import React from 'react';
 
+interface Agency {
+  name: string;
+  short_name: string;
+  display_name: string;
+  sortable_name: string;
+  slug: string;
+  children: Agency[];
+  cfr_references: {
+    title: number;
+    chapter: string;
+  }[];
+}
+
+interface AgenciesResponse {
+  agencies: Agency[];
+  error?: string;
+}
+
 interface ResultsDisplayProps {
-  data: any | null;
+  data: AgenciesResponse | null;
   loading: boolean;
   analysisType: string | null;
 }
@@ -9,7 +27,6 @@ interface ResultsDisplayProps {
 export default function ResultsDisplay({ 
   data, 
   loading, 
-  analysisType 
 }: ResultsDisplayProps) {
   if (loading) {
     return (
@@ -19,10 +36,10 @@ export default function ResultsDisplay({
     );
   }
 
-  if (!data || !analysisType) {
+  if (!data) {
     return (
       <div className="border border-gray-200 rounded-md p-4 bg-gray-50 min-h-[300px] flex items-center justify-center text-gray-500">
-        Select an agency and analysis type to view results
+        Click the button above to view content structure
       </div>
     );
   }
@@ -36,119 +53,45 @@ export default function ResultsDisplay({
     );
   }
 
-  // Different display based on analysis type
-  const renderContent = () => {
-    switch (analysisType) {
-      case 'wordCount':
-        return renderWordCountResults();
-      case 'historicalChanges':
-        return renderHistoricalChanges();
-      case 'contentStructure':
-        return renderContentStructure();
-      default:
-        return <p>Select an analysis type</p>;
-    }
-  };
-
-  const renderWordCountResults = () => {
+  // Recursive function to render agencies with indentation
+  const renderAgencyRow = (agency: Agency, depth = 0) => {
+    const indentClass = `pl-${depth * 6}`;
+    const cfr = agency.cfr_references && agency.cfr_references.length > 0
+      ? `${agency.cfr_references[0].title} CFR Chapter ${agency.cfr_references[0].chapter}`
+      : 'N/A';
+    
     return (
-      <div>
-        <h3 className="text-lg font-medium mb-2">{data.agency} Word Count Analysis</h3>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Word Count
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {data.titleCounts && data.titleCounts.map((item: any, index: number) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {item.title}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {item.wordCount.toLocaleString()}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  const renderHistoricalChanges = () => {
-    return (
-      <div>
-        <h3 className="text-lg font-medium mb-2">{data.agency} Historical Changes</h3>
-        <p className="mb-4 text-sm text-gray-600">
-          Period: {data.period?.start} to {data.period?.end}
-        </p>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Changes
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {data.changes && Object.entries(data.changes).map(([date, count]: [string, any], index: number) => (
-                <tr key={index}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {count}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    );
-  };
-
-  const renderContentStructure = () => {
-    // For simplicity, we're just showing the agencies list
-    return (
-      <div>
-        <h3 className="text-lg font-medium mb-4">All Agencies</h3>
-        <div className="overflow-y-auto max-h-[400px]">
-          <ul className="divide-y divide-gray-200">
-            {Array.isArray(data) && data.map((agency: any, index: number) => (
-              <li key={index} className="py-2">
-                <div className="font-medium">{agency.name}</div>
-                <div className="text-sm text-gray-500">Slug: {agency.slug}</div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+      <React.Fragment key={agency.slug}>
+        <tr className="border-b hover:bg-gray-50">
+          <td className={`py-3 px-4 ${indentClass}`}>
+            {depth > 0 && <span className="text-gray-400 mr-2">└─</span>}
+            {agency.display_name}
+          </td>
+          <td className="py-3 px-4">{agency.short_name}</td>
+          <td className="py-3 px-4">{cfr}</td>
+        </tr>
+        {agency.children && agency.children.map(child => renderAgencyRow(child, depth + 1))}
+      </React.Fragment>
     );
   };
 
   return (
     <div className="border border-gray-200 rounded-md p-4 bg-white">
-      {renderContent()}
+      <h3 className="text-lg font-medium mb-4">Agencies</h3>
+      <div className="overflow-auto max-h-[600px] rounded-md">
+        <table className="min-w-full bg-white border border-gray-200 rounded-md">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="py-3 px-4 text-left font-medium text-gray-700">Agency Name</th>
+              <th className="py-3 px-4 text-left font-medium text-gray-700">Abbreviation</th>
+              <th className="py-3 px-4 text-left font-medium text-gray-700">CFR Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.agencies && data.agencies.map(agency => renderAgencyRow(agency))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 } 
